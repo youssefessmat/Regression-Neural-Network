@@ -64,11 +64,11 @@ class NeuralNetwork:
         self.bias_hidden = np.zeros((1, self.hidden_size))
         self.bias_output = np.zeros((1, self.output_size))
 
-    def relu(self, x):
-        return np.maximum(0, x)
+    def sigmoid(self, x):
+        return 1 / (1 + np.exp(-x))
 
-    def relu_derivative(self, x):
-        return np.where(x > 0, 1, 0)
+    def sigmoid_derivative(self, x):
+        return self.sigmoid(x) * (1 - self.sigmoid(x))
 
     def set_hyperparameters(self, epochs, learning_rate):
         self.epochs = epochs
@@ -76,15 +76,15 @@ class NeuralNetwork:
 
     def forward_propagation(self, X):
         self.hidden_layer_input = np.dot(X, self.weights_input_to_hidden) + self.bias_hidden
-        self.hidden_layer_output = self.relu(self.hidden_layer_input)
+        self.hidden_layer_output = self.sigmoid(self.hidden_layer_input)
         self.output_layer_input = np.dot(self.hidden_layer_output, self.weights_hidden_to_output) + self.bias_output
         return self.output_layer_input  
 
     def backward_propagation(self, X, y, output):
         self.error = y - output
-        self.output_delta = self.error * self.relu_derivative(output)
+        self.output_delta = self.error * self.sigmoid_derivative(output)
         self.hidden_error = self.output_delta.dot(self.weights_hidden_to_output.T)
-        self.hidden_delta = self.hidden_error * self.relu_derivative(self.hidden_layer_output)
+        self.hidden_delta = self.hidden_error * self.sigmoid_derivative(self.hidden_layer_output)
 
         self.weights_hidden_to_output += self.hidden_layer_output.T.dot(self.output_delta) * self.learning_rate
         self.bias_output += np.sum(self.output_delta, axis=0, keepdims=True) * self.learning_rate
@@ -96,7 +96,7 @@ class NeuralNetwork:
         train_output = self.forward_propagation(X_batch)
         self.backward_propagation(X_batch, y_batch, train_output)
 
-    def train_batch(self, X_train, y_train, batch_size):
+    def train_batch(self, X_train, y_train, X_test, y_test, batch_size):
         prev_test_mse = float('inf')
         for epoch in range(self.epochs):
             for i in range(0, len(X_train), batch_size):
@@ -104,8 +104,8 @@ class NeuralNetwork:
                 self.update_weights(X_batch, y_batch)
 
             # Testing phase
-            test_output = self.forward_propagation(features_test)
-            test_mse = np.mean(np.square(targets_test - test_output))
+            test_output = self.forward_propagation(X_test)
+            test_mse = np.mean(np.square(y_test - test_output))
 
             print(f'Epoch {epoch+1}, Test MSE: {test_mse}')
 
@@ -119,15 +119,15 @@ class NeuralNetwork:
     def predict(self, X):
         return self.forward_propagation(X)
 
+    def calculate_error(self, y_true, y_pred):
+        return np.mean(np.square(y_true - y_pred))
+
 input_size = features_train.shape[1]
 hidden_size = 8
 output_size = 1
 epochs = 500
 learning_rate = 0.0001
 model = NeuralNetwork(input_size, hidden_size, output_size, epochs, learning_rate)
-
-# Train the model on the full training set
-model.train_batch(features_train, targets_train.reshape(-1, 1), batch_size=32)
 
 # Perform cross-validation using Scikit-Learn
 kf = KFold(n_splits=5, shuffle=True, random_state=42)
@@ -145,7 +145,10 @@ for train_index, test_index in kf.split(features):
     y_test = (y_test - y_train.mean()) / y_train.std()  # Use mean and std from the training set for normalization
 
     # Train the model on the current fold
-    model.train_batch(X_train, y_train.reshape(-1, 1), batch_size=32)
+    model.train_batch(X_train, y_train.reshape(-1, 1), X_test, y_test.reshape(-1, 1), batch_size=32)
+
+# Train the model on the full training set
+model.train_batch(features_train, targets_train.reshape(-1, 1), features_test, targets_test.reshape(-1, 1), batch_size=32)
 
 # Make predictions on the test set
 predictions = model.predict(features_test)
@@ -155,3 +158,31 @@ test_mae = mean_absolute_error(targets_test, predictions)
 test_r2 = r2_score(targets_test, predictions)
 print(f"Mean Absolute Error on Test Set: {test_mae}")
 print(f"R-squared on Test Set: {test_r2}")
+
+def get_user_input():
+    # Get input from user
+    cement = float(input("Enter cement: "))
+    water = float(input("Enter water: "))
+    superplasticizer = float(input("Enter superplasticizer: "))
+    age = float(input("Enter age: "))
+
+    # Create a numpy array from the input
+    user_data = np.array([cement, water, superplasticizer, age])
+
+    # Normalize the data using the mean and standard deviation from the training set
+    user_data_normalized = normalize_features(user_data, mean_train, std_train)
+
+    # Reshape the data to match the input shape of the neural network
+    user_data_reshaped = user_data_normalized.reshape(1, -1)
+
+    return user_data_reshaped
+
+# Get user input
+user_data = get_user_input()
+
+# Use the neural network to predict the cement strength
+predicted_strength = model.predict(user_data)
+predicted_strength_actual = (predicted_strength * std_target) + mean_target
+
+print(f"The predicted cement strength is: {predicted_strength}")
+print(f"The predicted actualncement strength is: {predicted_strength_actual}")
