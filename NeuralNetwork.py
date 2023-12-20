@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import train_test_split
+# from sklearn.model_selection import train_test_split
+
 
 df = pd.read_excel('concrete_data.xlsx')
 
@@ -10,12 +11,12 @@ df = pd.read_excel('concrete_data.xlsx')
 
 #         df[column] = df[column] / df[column].sum()
 
-features = df.drop('concrete_compressive_strength', axis=1).values  
-targets = df['concrete_compressive_strength'].values  
+features = df.drop('concrete_compressive_strength', axis=1).values  # features should be a 2D array
+targets = df['concrete_compressive_strength'].values  # targets should be a 1D array
 
 
-num_samples = features.shape[0]  
-num_train = int(0.75 * num_samples)  
+num_samples = features.shape[0]
+num_train = int(0.75 * num_samples) 
 
 indices = np.arange(num_samples)
 np.random.shuffle(indices)
@@ -27,7 +28,6 @@ features_train = features[train_indices]
 targets_train = targets[train_indices]
 features_test = features[test_indices]
 targets_test = targets[test_indices]
-
 
 # print("Training Features:\n", features_train)
 # print("Training Targets:\n", targets_train)
@@ -44,12 +44,11 @@ class NeuralNetwork:
 
         self.weights_input_to_hidden = np.random.randn(self.input_size, self.hidden_size)
         self.weights_hidden_to_output = np.random.randn(self.hidden_size, self.output_size)
-        self.bias_hidden = np.zeros((1, self.hidden_size))#intialize el bias hena be zero 
+        self.bias_hidden = np.zeros((1, self.hidden_size))
         self.bias_output = np.zeros((1, self.output_size))
 
     def sigmoid(self, x):
         return 1 / (1 + np.exp(-x))
-
 
     def sigmoid_derivative(self, x):
         return self.sigmoid(x) * (1 - self.sigmoid(x))
@@ -58,3 +57,27 @@ class NeuralNetwork:
         self.epochs = epochs
         self.learning_rate = learning_rate
 
+    def forward_propagation(self, X):
+        self.hidden_layer_input = np.dot(X, self.weights_input_to_hidden) + self.bias_hidden
+        self.hidden_layer_output = self.sigmoid(self.hidden_layer_input)
+        self.output_layer_input = np.dot(self.hidden_layer_output, self.weights_hidden_to_output) + self.bias_output
+        return self.output_layer_input  
+
+    def backward_propagation(self, X, y, output):
+        self.error = y - output
+        self.output_delta = self.error * self.sigmoid_derivative(output)
+        self.hidden_error = self.output_delta.dot(self.weights_hidden_to_output.T)
+        self.hidden_delta = self.hidden_error * self.sigmoid_derivative(self.hidden_layer_output)
+
+        self.weights_hidden_to_output += self.hidden_layer_output.T.dot(self.output_delta) * self.learning_rate
+        self.bias_output += np.sum(self.output_delta, axis=0, keepdims=True) * self.learning_rate
+        self.weights_input_to_hidden += X.T.dot(self.hidden_delta) * self.learning_rate
+        self.bias_hidden += np.sum(self.hidden_delta, axis=0, keepdims=True) * self.learning_rate
+
+    def train(self, X, y):
+        for i in range(self.epochs):
+            output = self.forward_propagation(X)
+            self.backward_propagation(X, y, output)
+
+            mse = np.mean(np.square(y - self.forward_propagation(X)))
+            print(f'Epoch {i+1}, MSE: {mse}')
