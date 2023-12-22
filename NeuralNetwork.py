@@ -167,7 +167,7 @@ class NeuralNetwork:
         self.backward_propagation(X_batch, y_batch, train_output)
 
 
-    def train_batch(self, F_train, T_train, X_test, y_test, batch_size):
+    def train_batch(self, F_train, T_train, X_test, y_test, batchSize):
         # Set the acceptable error for early stopping
         acceptable_error = 0.01  
 
@@ -177,11 +177,11 @@ class NeuralNetwork:
         # Iterate through epochs
         for epoch in range(self.epochs):
             # Iterate through batches in the training data
-            for i in range(0, len(F_train), batch_size):
+            for i in range(0, len(F_train), batchSize):
                 # Extract a batch of training features (X_batch) and corresponding targets (y_batch)
 
-                xBatch = F_train[i:i + batch_size]  # Select a subset of training features starting from index i
-                yBatch = T_train[i:i + batch_size]  # Select the corresponding subset of training targets
+                xBatch = F_train[i:i + batchSize]  # Select a subset of training features starting from index i
+                yBatch = T_train[i:i + batchSize]  # Select the corresponding subset of training targets
                                 # Update weights and biases using the current batch
                 self.update_weights(xBatch, yBatch)
 
