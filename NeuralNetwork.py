@@ -3,45 +3,78 @@ import numpy as np
 from sklearn.metrics import mean_absolute_error, r2_score
 from sklearn.model_selection import KFold
 
+# Attempting to Read Data from an Excel File:
 try:
+    # Try reading data from the 'concrete_data.xlsx' Excel file using Pandas.
     df = pd.read_excel('concrete_data.xlsx')
+
 except FileNotFoundError:
+    # If the file is not found, handle the FileNotFoundError.
     print("Error: File not found.")
     exit()
+
 except pd.errors.EmptyDataError:
+    # If the file is found but contains no data, handle the EmptyDataError.
     print("Error: Empty data in the file.")
     exit()
+
+# Extracting Features and Targets from the DataFrame:
+# - Features are obtained by dropping the 'concrete_compressive_strength' column.
+# - Targets are obtained by selecting only the 'concrete_compressive_strength' column.
 features = df.drop('concrete_compressive_strength', axis=1).values
 targets = df['concrete_compressive_strength'].values
+
+# Counting the Number of Samples:
+# - 'num_samples' is the total number of samples in the dataset.
 num_samples = features.shape[0]
 
-
+# Calculate the number of training samples by taking 75% of the total number of samples
 num_train = int(0.75 * num_samples)
+
+# Generate an array of indices representing the samples
 indices = np.arange(num_samples)
+
+# Shuffle the indices randomly to create a randomized order of samples
 np.random.shuffle(indices)
 
+# Select the first 'num_train' indices for training and the rest for testing
 train_indices = indices[:num_train]
 test_indices = indices[num_train:]
 
-
+# Extract the corresponding features and targets for training and testing sets
 features_train = features[train_indices]
 targets_train = targets[train_indices]
 features_test = features[test_indices]
 targets_test = targets[test_indices]
 
+# Normalize the features using the mean and standard deviation of the training set
+# we use normalization for:
+
+# 1. Leveling the Playing Field:
+#    - Normalization ensures that all input factors have an equal say in the model's learning process. It prevents one feature from overshadowing others just because it has a larger scale.
+
+# 2. Smoother Learning Process:
+#    - For our model to learn effectively, we want it to focus on the patterns in our data, not be distracted by differences in scale. Normalization smoothens the learning journey, making it more efficient and accurate.
 def normalize_features(features, mean, std):
     return (features - mean) / std
 
-
+# Calculate the mean and standard deviation of the training features
 mean_train = features_train.mean(axis=0)
 std_train = features_train.std(axis=0)
-features_train = normalize_features(features_train, mean_train, std_train)
-features_test = normalize_features(features_test, mean_train, std_train)  
 
+# Normalize the training and testing features using the mean and standard deviation of the training set
+features_train = normalize_features(features_train, mean_train, std_train)
+features_test = normalize_features(features_test, mean_train, std_train)
+
+# Calculate the mean and standard deviation of the training targets
 mean_target = targets_train.mean()
 std_target = targets_train.std()
+
+# Normalize the training and testing targets using the mean and standard deviation of the training set
 targets_train = (targets_train - mean_target) / std_target
-targets_test = (targets_test - mean_target) / std_target  
+targets_test = (targets_test - mean_target) / std_target
+
+
 
 class NeuralNetwork:
 
@@ -58,20 +91,44 @@ class NeuralNetwork:
 
 
     def sigmoid(self, x):
+        # Calculate the sigmoid activation function for a given input 'x'
         return 1 / (1 + np.exp(-x))
-    
+
+                                                        # - 'x' is the input to the sigmoid function.
+                                                        # - 'np.exp(-x)' calculates the exponent of the negative input.
+                                                        # - '1 / (1 + np.exp(-x))' computes the sigmoid activation function, transforming 'x' to a value between 0 and 1.
     def sigmoid_derivative(self, x):
+        # Calculate the derivative of the sigmoid activation function for a given input 'x'
         return self.sigmoid(x) * (1 - self.sigmoid(x))
     
+                                                        # - 'x' is the input to the sigmoid derivative.
+                                                        # - 'self.sigmoid(x)' computes the sigmoid function for the given input.
+                                                        # - '1 - self.sigmoid(x)' calculates (1 - sigmoid(x)), representing the complementary part of the sigmoid function.
+                                                        # - The product of the sigmoid function and its complementary part gives the derivative of the sigmoid.
+
     def setParameters(self, epochs, learning_rate):
+        # Set the number of training epochs and learning rate for the neural network
         self.epochs = epochs
-        self.learning_rate = learning_rate
+        self.learning_rate = learning_rate                                                        # - 'epochs' is the number of training epochs, which represents the number of times the entire training dataset is passed through the network.
+                                                        # - 'learning_rate' is the step size used during gradient descent to update the model parameters.
+                                                        # - 'self.epochs = epochs' sets the number of training epochs for the neural network object.
+                                                        # - 'self.learning_rate = learning_rate' sets the learning rate for the neural network object.
 
     def forward_propagation(self, X):
+        # Calculate the input to the hidden layer by performing a dot product of input features and weights,
+        # then adding the bias for the hidden layer
         self.hidden_layer_input = np.dot(X, self.weights_input_to_hidden) + self.bias_hidden
+
+        # Apply the sigmoid activation function to the hidden layer input to obtain the hidden layer output
         self.hidden_layer_output = self.sigmoid(self.hidden_layer_input)
+
+        # Calculate the input to the output layer by performing a dot product of hidden layer output and weights,
+        # then adding the bias for the output layer
         self.output_layer_input = np.dot(self.hidden_layer_output, self.weights_hidden_to_output) + self.bias_output
+
+        # Return the calculated input to the output layer
         return self.output_layer_input
+
     
     def backward_propagation(self, feature, target, output):
         # Calculate the error in the prediction by finding the difference between the target and the actual output
