@@ -41,6 +41,7 @@ np.random.shuffle(indices)
 train_indices = indices[:num_train]
 test_indices = indices[num_train:]
 
+
 # Extract the corresponding features and targets for training and testing sets
 features_train = features[train_indices]
 targets_train = targets[train_indices]
@@ -75,7 +76,7 @@ class NeuralNetwork:
         self.output_size = output_size
         self.epochs = epochs            
         self.learning_rate = learning_rate
-        self.weights_input_to_hidden = np.random.randn(self.input_size, self.hidden_size) / np.sqrt(self.input_size)
+        self.weights_input_to_hidden = np.random.randn(self.input_size, self.hidden_size) / np.sqrt(self.input_size) 
         self.weights_hidden_to_output = np.random.randn(self.hidden_size, self.output_size) / np.sqrt(self.hidden_size)
         self.hiddenBias = np.zeros((1, self.hidden_size))
         self.outputBias = np.zeros((1, self.output_size))
@@ -84,7 +85,6 @@ class NeuralNetwork:
     def sigmoid(self, x):
         # Calculate the sigmoid activation function for a given input 'x'
         return 1 / (1 + np.exp(-x))  # transforming 'x' to a value between 0 and 1.
-
                                                        
     def sigmoid_derivative(self, x):
         # Calculate the derivative of the sigmoid activation function for a given input 'x'
@@ -240,10 +240,12 @@ predictions = model.predict(features_test)
 # Evaluate the model
 MAEtest = mean_absolute_error(targets_test, predictions)
 MSEtest = model.calculateMse(targets_test, predictions)
+R2test = r2_score(targets_test, predictions)
 
 # Print the evaluation results
 print(f"Mean Absolute Error on Test Set: {MAEtest}")
 print(f"Mean Squared Error on Test Set: {MSEtest}")
+print(f"R-squared on Test Set: {R2test}")
 
 def get_user_input():
     cement = float(input("Enter cement: "))
